@@ -1,4 +1,5 @@
 /* Bubble sort: Pointer version */
+
 void bubble_p(long *data, long count) {
     long *i, *last;
     for (last = data + count - 1; last > data; last--) {
