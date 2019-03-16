@@ -14,8 +14,8 @@ data_end:
     .quad 0x0000000000000001
 
 main:
-    irmovq data,%rdi
-	irmovq data_end,%rsi
+    irmovq data, %rdi
+	irmovq data_end, %rsi
 	call ysBubbleP
 	ret
 
