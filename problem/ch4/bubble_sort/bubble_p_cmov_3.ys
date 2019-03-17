@@ -34,9 +34,13 @@ L5:
     mrmovq (%rax),  %r10
     rrmovq %r9,     %r8
     subq   %r10,    %r8
-    jge    L3
-    rmmovq %r10,    8(%rax)
-    rmmovq %r9,     (%rax)
+# begin differences
+    cmovl %r9, %r11
+    cmovl %r10, %r9
+    cmovl %r11, %r10
+    rmmovq %r9, 8(%rax)
+    rmmovq %r10, (%rax)
+# end
     jmp L3
 L7:
     irmovq $8,   %r8
