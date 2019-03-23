@@ -3,12 +3,12 @@ all:
 	gcc -Og -g sample.c -o dg
 
 dump:
-	objdump -d sg
-	objdump -d dg
+	objdump -d sg > sg.s
+	objdump -d dg > dg.s
 
 slib:
 	ldd sg
 
 .PHONY: clean
 clean:
-	rm sg dg
+	rm sg dg *.s
