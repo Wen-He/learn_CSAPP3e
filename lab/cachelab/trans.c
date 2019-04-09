@@ -22,6 +22,98 @@ int is_transpose(int M, int N, int A[N][M], int B[M][N]);
 char transpose_submit_desc[] = "Transpose submission";
 void transpose_submit(int M, int N, int A[N][M], int B[M][N])
 {
+    if (M == 32 && N == 32) {
+        int i, j, k, l, t1, t2, t3, t4, t5, t6, t7, t8;
+        for (i = 0; i < N; i += 8) {
+            for (j = 0; j < M; j += 8) {
+                for (k = i; k < i + 8; k++) {
+                    for (l = j; l < j + 8; l += 8) {
+                        t1 = A[k][l];
+                        t2 = A[k][l + 1];
+                        t3 = A[k][l + 2];
+                        t4 = A[k][l + 3];
+                        t5 = A[k][l + 4];
+                        t6 = A[k][l + 5];
+                        t7 = A[k][l + 6];
+                        t8 = A[k][l + 7];
+                        B[l][k] = t1;
+                        B[l + 1][k] = t2;
+                        B[l + 2][k] = t3;
+                        B[l + 3][k] = t4;
+                        B[l + 4][k] = t5;
+                        B[l + 5][k] = t6;
+                        B[l + 6][k] = t7;
+                        B[l + 7][k] = t8;
+                    }
+                }
+            }
+        }
+    } else if (M == 64 && N == 64) {
+        int i, j, k, l, t1, t2, t3, t4, t5, t6, t7, t8;
+        for (i = 0; i < N; i += 8) {
+            for (j = 0; j < M; j += 8) {
+                for (k = i; k < i + 4; k++) {
+                    t1 = A[k][j];
+                    t2 = A[k][j + 1];
+                    t3 = A[k][j + 2];
+                    t4 = A[k][j + 3];
+                    t5 = A[k][j + 4];
+                    t6 = A[k][j + 5];
+                    t7 = A[k][j + 6];
+                    t8 = A[k][j + 7];
+
+                    B[j][k] = t1;
+                    B[j + 1][k] = t2;
+                    B[j + 2][k] = t3;
+                    B[j + 3][k] = t4;
+                    B[j][k + 4] = t5;
+                    B[j + 1][k + 4] = t6;
+                    B[j + 2][k + 4] = t7;
+                    B[j + 3][k + 4] = t8;
+                }
+                for (l = j + 4; l < j + 8; l++) {
+
+                    t5 = A[i + 4][l - 4];
+                    t6 = A[i + 5][l - 4];
+                    t7 = A[i + 6][l - 4];
+                    t8 = A[i + 7][l - 4];
+
+                    t1 = B[l - 4][i + 4];
+                    t2 = B[l - 4][i + 5];
+                    t3 = B[l - 4][i + 6];
+                    t4 = B[l - 4][i + 7];
+
+                    B[l - 4][i + 4] = t5;
+                    B[l - 4][i + 5] = t6;
+                    B[l - 4][i + 6] = t7;
+                    B[l - 4][i + 7] = t8;
+
+                    B[l][i] = t1;
+                    B[l][i + 1] = t2;
+                    B[l][i + 2] = t3;
+                    B[l][i + 3] = t4;
+
+                    B[l][i + 4] = A[i + 4][l];
+                    B[l][i + 5] = A[i + 5][l];
+                    B[l][i + 6] = A[i + 6][l];
+                    B[l][i + 7] = A[i + 7][l];
+                }
+            }
+        }
+    } else if (M == 61 && N == 67) {
+    int i, j, k, l, t;
+    int size = 23;
+    for (i = 0; i < N; i += size) {
+        for (j = 0;  j < M; j += size) {
+            for (k = i; k < i + size && k < N; k++) {
+                for (l = j; l < j + size && l < M; l++) {
+                    t = A[k][l];
+                    B[l][k] = t;
+                }
+            }
+        }
+    }
+}
 }
 
 /* 
