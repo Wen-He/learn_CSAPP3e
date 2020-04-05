@@ -1,3 +1,4 @@
+/* foo6.c */
 void p2(void);
 
 int main() {

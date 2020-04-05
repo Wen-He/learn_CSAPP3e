@@ -1,3 +1,4 @@
+/* bar6.c */
 #include <stdio.h>
 
 char main;
