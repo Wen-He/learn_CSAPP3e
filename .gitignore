@@ -2,4 +2,7 @@
 
 .DStore
 
+*.tar
+
 a.out
+
