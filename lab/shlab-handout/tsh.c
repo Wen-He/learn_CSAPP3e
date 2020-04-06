@@ -168,12 +168,18 @@ void eval(char *cmdline)
     char *argv[MAXARGS]; /* Argument list execve */
     int bg;              /* Should the job run in bg or fg? */
     pid_t pid;           /* Process id */
+    sigset_t mask_all, mask_chld, mask_prev; /* signal mask */
     
-    sigset_t mask_all, mask_chld, mask_prev;
-    sigfillset(&mask_all);
-    sigemptyset(&mask_chld);
-    sigaddset(&mask_chld, SIGCHLD);
-
+    if (sigfillset(&mask_all) < 0)
+        unix_error("sigfillset error");
+    if (sigemptyset(&mask_chld) < 0)
+        unix_error("sigemptyset error");
+    if (sigaddset(&mask_chld, SIGCHLD) < 0)
+        unix_error("sigaddset error");
+    if (sigaddset(&mask_chld, SIGINT) < 0)
+        unix_error("sigaddset error");
+    /* Should mask_chld block SIGTSTP? */
+    
     bg = parseline(cmdline, argv);
     if (argv[0] == NULL)
         return;   /* Ignore empty lines */
@@ -189,9 +195,11 @@ void eval(char *cmdline)
                 exit(0);
             }
         }
+        else if (pid < 0)
+            unix_error("fork error");
 
-        sigprocmask(SIG_BLOCK, &mask_all, NULL);        /* Parent process */
-        addjob(jobs, pid, bg ? BG : FG, cmdline);           /* Add the child to the job list */
+        sigprocmask(SIG_BLOCK, &mask_all, NULL);         /* Parent process */
+        addjob(jobs, pid, (bg == 1) ? BG : FG, cmdline); /* Add the child to the job list */
         sigprocmask(SIG_SETMASK, &mask_prev, NULL);     /* Unblock SIGCHLD */
         /* Parent waits for foreground job to terminate */
         if (!bg) {
@@ -266,10 +274,12 @@ int parseline(const char *cmdline, char **argv)
  */
 int builtin_cmd(char **argv) 
 {
-    if (!strcmp(argv[0], "quit")) /* quit command */
+    if (!strcmp(argv[0], "quit")) { /* quit command */
         exit(0);
-    if (!strcmp(argv[0], "&"))    /* Ignore singleton & */
+    }
+    if (!strcmp(argv[0], "&")) {    /* Ignore singleton & */
         return 1;
+    }
     else if (!strcmp(argv[0], "fg") || !strcmp(argv[0], "bg")) {
         do_bgfg(argv);
         return 1;
@@ -301,7 +311,7 @@ void do_bgfg(char **argv)
         }
     }
     else if (argv[1][0] == '%') {
-        int jid = atoi((char *)&argv[1][1]);
+        int jid = atoi(&argv[1][1]);
         if ((job = getjobjid(jobs, jid)) == NULL) {
             printf("%s: No such job\n", argv[1]);
             return;
@@ -337,7 +347,7 @@ void waitfg(pid_t pid)
     if (fgjob == NULL)  /* foreground jobs has already been reaped. */
         return;
 
-    while (fgjob->state == FG)
+    while (fgjob->pid == pid && fgjob->state == FG)
         sleep(1);
 
     return;
@@ -356,7 +366,7 @@ void waitfg(pid_t pid)
  */
 void sigchld_handler(int sig) 
 {
-    int olderrno = errno;
+    // int olderrno = errno;
 
     int status;
     pid_t pid;
@@ -388,10 +398,10 @@ void sigchld_handler(int sig)
     }
 
     /* The only normal termination is if there are no more children */
-    if (!(pid ==0 || (pid == -1 &&errno == ECHILD)))
+    if (!((pid == 0) || (pid == -1 && errno == ECHILD)))
         unix_error("waitpid in chld error");
     
-    errno = olderrno;
+    // errno = olderrno;
     return;
 }
 
@@ -403,7 +413,7 @@ void sigchld_handler(int sig)
 void sigint_handler(int sig) 
 {
     pid_t pid;
-    if ((pid = fgpid(jobs) > 0))
+    if ((pid = fgpid(jobs)) > 0)
     {
         if (kill(-pid, SIGINT) < 0)
             unix_error("kill in sigint error");
