@@ -132,7 +132,6 @@ NOTES:
  *      the correct answers.
  */
 
-
 #endif
 //1
 /* 
@@ -142,13 +141,10 @@ NOTES:
  *   Max ops: 14
  *   Rating: 1
  */
-int bitXor(int x, int y) {
- /* 
-  * Set all bits to 1 except for thoes 1 bits in both x and y,
-  * and set all bits to 1 except for thoes 0 bits in both x and y.
-  * Then the common bits in the two results is bitXor.
-  */
-  return ~(x & y) & ~(~x & ~y);
+int bitXor(int x, int y)
+{
+	/*exploit ability of NOT and AND to compute EXCLUSIVE-OR*/
+	return ~((~((~x) & y)) & (~(x & (~y))));
 }
 /* 
  * tmin - return minimum two's complement integer 
@@ -156,9 +152,10 @@ int bitXor(int x, int y) {
  *   Max ops: 4
  *   Rating: 1
  */
-int tmin(void) {
-  return (1 << 31);
-
+int tmin(void)
+{
+	/*exploit ability of shifts to compute powers of 2*/
+	return 0x1 << 31;
 }
 //2
 /*
@@ -168,9 +165,10 @@ int tmin(void) {
  *   Max ops: 10
  *   Rating: 1
  */
-int isTmax(int x) {
-  int is_neg1 = !(~x);
-  return !(is_neg1 | (~(x+1)^x));
+int isTmax(int x)
+{
+	/*a number OR NOT itself equals 0*/
+	return !((~(x + 1) ^ x) | !(~x));
 }
 /* 
  * allOddBits - return 1 if all odd-numbered bits in word set to 1
@@ -180,16 +178,11 @@ int isTmax(int x) {
  *   Max ops: 12
  *   Rating: 2
  */
-int allOddBits(int x) {
-  int mask = 0xAA;
-  mask &= x;
-  x >>= 8;
-  mask &= x;
-  x >>= 8;
-  mask &= x;
-  x >>= 8;
-  mask &= x;
-  return !((mask & 0xFF)^0xAA);
+int allOddBits(int x)
+{
+	/*exploit ability of OR to make the number be -1*/
+	int y = 0x55;
+	return !(((y | x) | ((y << 8) | x) | ((y << 16) | x) | ((y << 24) | x)) + 1);
 }
 /* 
  * negate - return -x 
@@ -198,11 +191,10 @@ int allOddBits(int x) {
  *   Max ops: 5
  *   Rating: 2
  */
-int negate(int x) {
- /*
-  * The sign bit add 1.
-  */
-  return ~x + 1;
+int negate(int x)
+{
+	/*exploit ability of NOT to compute subtraction*/
+	return ~x + 1;
 }
 //3
 /* 
@@ -214,11 +206,10 @@ int negate(int x) {
  *   Max ops: 15
  *   Rating: 3
  */
-int isAsciiDigit(int x) {
- /*
-  * According to the last four bits.
-  */
-  return (!(((0x07 & x) | 0x30) ^ x)) | !(x^0x38) | !(x^0x39);
+int isAsciiDigit(int x)
+{
+	/*exploit ability of OR NOT to make the number be 0*/
+	return (!((x >> 3) ^ 0x6)) | (!(x ^ 0x38)) | (!(x ^ 0x39));
 }
 /* 
  * conditional - same as x ? y : z 
@@ -227,14 +218,11 @@ int isAsciiDigit(int x) {
  *   Max ops: 16
  *   Rating: 3
  */
-int conditional(int x, int y, int z) {
- /*
-  * Take advantage of -1(0xFFFFFFFF).
-  * If x is 0, then mask is 0xFFFFFFFF.
-  * If x is non-zero, then mask is -1 plus 1.
-  */
-  int mask = (~0x00 + !x);
-  return (mask & y) | (~mask & z);
+int conditional(int x, int y, int z)
+{
+	/*exploit ability of AND to reserve the number*/
+	x = !x;
+	return ((~(~x + 1)) & y) | ((~x + 1) & z);
 }
 /* 
  * isLessOrEqual - if x <= y  then return 1, else return 0 
@@ -243,14 +231,10 @@ int conditional(int x, int y, int z) {
  *   Max ops: 24
  *   Rating: 3
  */
-int isLessOrEqual(int x, int y) {
- /*
-  * in 2s complement, -x = ~x+1.
-  */
-  int opp_s = (x ^ y) >> 31;
-  int x_neg = x >> 31;
-  int x_bigger = (y + (~x + 1)) >> 31;
-  return (!!(opp_s & x_neg)) | (!opp_s & !x_bigger);
+int isLessOrEqual(int x, int y)
+{
+	/*exploit ability of NOT to compute subtraction*/
+	return !((((y + (~x + 1)) >> 31) & ((~x >> 31) | (y >> 31))) | (~((x >> 31) | (~y >> 31))));
 }
 //4
 /* 
@@ -261,11 +245,10 @@ int isLessOrEqual(int x, int y) {
  *   Max ops: 12
  *   Rating: 4 
  */
-int logicalNeg(int x) {
- /*
-  * For 0, -0 and +0 have the same sign bit(0).
-  */
-  return ((x | (1 + ~x)) >> 31) + 1;
+int logicalNeg(int x)
+{
+	/*exploit ability of shifs to compute the highest bits*/
+	return ((x >> 31) | ((~x + 1) >> 31)) + 1;
 }
 /* howManyBits - return the minimum number of bits required to represent x in
  *             two's complement
@@ -279,42 +262,18 @@ int logicalNeg(int x) {
  *  Max ops: 90
  *  Rating: 4
  */
-int howManyBits(int x) {
-  int y, result, mask16, mask8, mask4, mask2, mask1, bitnum;
-
-  mask1 = 0x2;  		             // 0x1 << 1
-  mask2 = 0xC;  		             // 0x3 << 2
-  mask4 = 0xF0;			             // 0x000000F0
-  mask8 = 0xFF<<8;		           // 0x0000FF00
-  mask16 = (mask8 | 0xFF) << 16; // 0xFFFF0000
-
-  // If x >= 0, the left 0 bits is needless.
-  // If x < 0, the left 1 bits is needless.
-  y = x ^ (x >> 31);  
-
-  result = 1; // 1 bit for sign
-  // binary search
-  bitnum = (!!(y & mask16)) << 4;
-  result += bitnum;
-  y >>= bitnum;
-
-  bitnum = (!!(y & mask8)) << 3;
-  result += bitnum;
-  y >>= bitnum;
-
-  bitnum = (!!(y & mask4)) << 2;
-  result += bitnum;
-  y >>= bitnum;
-
-  bitnum = (!!(y & mask2)) << 1;
-  result += bitnum;
-  y >>= bitnum;
-
-  bitnum = (!!(y & mask1));
-  result += bitnum;
-  y >>= bitnum;
-
-  return result + (y & 1);
+int howManyBits(int x)
+{
+	/*exploit ability of shifs to compute the bits of the number*/
+	int z = 0;
+	x = x ^ (x >> 31);
+	z = (!!(x >> (16))) << 4;
+	z = z + ((!!(x >> (8 + z))) << 3);
+	z = z + ((!!(x >> (4 + z))) << 2);
+	z = z + ((!!(x >> (2 + z))) << 1);
+	z = z + ((!!(x >> (1 + z))) << 0);
+	x = !!x;
+	return ((~(~x + 1)) & 0x1) | ((~x + 1) & (z + 2));
 }
 //float
 /* 
@@ -328,18 +287,23 @@ int howManyBits(int x) {
  *   Max ops: 30
  *   Rating: 4
  */
-unsigned floatScale2(unsigned uf) {
-  int maskS, maskE, maskM;
+unsigned floatScale2(unsigned uf)
+{
+	/*exploit ability of shifs to compute multilpy*/
+	int x, y, z;
+	x = (1 << 31 >> 31) & 0xff;
+	y = (uf << 1 >> 24) & 0xff;
+	z = uf >> 31 << 31;
 
-  maskS = 1 << 31;
-  maskE = 0xFF << 23;
-  maskM = ~(maskS | maskE);
-  
-  if (!(maskE & uf))  // denormalized case
-    uf = ((maskM & uf) << 1) | (maskS & uf);  // M << 1
-  else if ((maskE & uf) ^ maskE)  // normalized case
-    uf += (1 << 23); // E + 1
-  return uf;
+	if (!uf || !(uf ^ (1 << 31)) || !(x ^ y))
+		return uf;
+	else
+	{
+		if (!y)
+			return (uf << 1) + z;
+		else
+			return uf + (1 << 23);
+	}
 }
 /* 
  * floatFloat2Int - Return bit-level equivalent of expression (int) f
@@ -353,41 +317,38 @@ unsigned floatScale2(unsigned uf) {
  *   Max ops: 30
  *   Rating: 4
  */
-int floatFloat2Int(unsigned uf) {
-  int S, E, M, e, shift;
-  int maskS, maskE, maskM, bias;
-  
-  bias = -127;
-  // bias = ~0x7F + 1;
+int floatFloat2Int(unsigned uf)
+{
+	/*exploit ability of shifs to compute different parts of the number*/
+	int x, y, z, p, q, re;
+	x = uf >> 31 & 0x1;
+	y = (uf >> 23) & 0xff;
+	z = uf & ((1 << 23) + (~1) + 1);
+	p = y + (~0x7e);
 
-  maskS = 0x01 << 31;
-  maskE = 0xFF << 23;
-  maskM = ~(maskS | maskE);
-  
-  S = maskS & uf;
-  E = maskE & uf;
-  M = maskM & uf;
-
-  // For denormalized case, the num will be too small
-  // So the 24th bit is 1. And if shift is bigger than 7,
-  // the num will be too large.
-  M |= (0x01 << 23);
-
-
-  e = bias + (E >> 23);
-  // shift = (~0x17 + 1) + e;
-  shift = e - 23;
-
-  if ((!(E ^ maskE)) || shift > 7)    return (1 << 31);
-  if (e < 0)    return 0;
-  if (shift < 0)
-    M >>= (~shift + 1);
-  else
-    M <<= shift;
-  if (S)
-    return (~M + 1);
-  else
-    return M;
+	if (!y && !z)
+		return 0;
+	if (!(y ^ 0xff))
+		return 0x80000000u;
+	else
+	{
+		if (((y + 1) >> 7) ^ 0x1)
+			return 0;
+		else
+		{
+			if ((p + 1) >> 5)
+				return 0x80000000u;
+			else
+			{
+				q = 24 + (~p);
+				re = (1 << p) + (z >> q);
+				if (!x)
+					return re;
+				else
+					return ~re + 1;
+			}
+		}
+	}
 }
 /* 
  * floatPower2 - Return bit-level equivalent of the expression 2.0^x
@@ -402,13 +363,32 @@ int floatFloat2Int(unsigned uf) {
  *   Max ops: 30 
  *   Rating: 4
  */
-unsigned floatPower2(int x) {
-  int INF, e;
+unsigned floatPower2(int x)
+{
+	/*exploit ability of shifs to compute different parts of the result*/
+/*	int fbit, e;
+	e = x + 0x7f;
+	fbit = x >> 31;
 
-  INF = 0xFF << 23;
-  e = 127 + x;
+	if (!fbit)
+	{
+		if (x >> 7)
+			return 0xff << 23;
+		else
+			return e << 23;
+	}
+	else
+	{
+		if ((x + 0x96) >> 31)
+			return 0;
+		else if (e >> 31)
+			return 1 << (x + 0x95);
+		else
+			return e << 23;
+	} */
+  if(x>127)return 0x7F800000;
+    else if(x<(-149))return 0;
+      else if(x>=-126&&x<=127)return (x+127)<<23;
+        else return 0x1<<(x+149);
 
-  if (x < 0)    return 0;
-  if (e >= 255)    return INF;
-  return e << 23;
 }
